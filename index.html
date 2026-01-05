@@ -1,1 +1,310 @@
-hello world！
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="content-language" content="zh-CN" />
+    <meta http-equiv="X-UA-Compatible" content="IE=EmulateIE10" />
+    <meta name="renderer" content="webkit|ie-comp|ie-stand">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="baidu-site-verification" content="codeva-DmQobbQJTK" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="x5-orientation" content="portrait" />
+    <meta name="screen-orientation" content="portrait" />
+    
+    <!-- 引入jQuery和Layui -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/layui/2.6.8/layui.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/layui/2.6.8/css/layui.min.css" />
+    
+    <title>网盘搜索</title>
+    
+    <style>
+        /* 基本样式 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .conch-main {
+            padding: 20px 0;
+        }
+        
+        .conch-main-wrap {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            padding: 20px;
+        }
+        
+        /* 表格样式 */
+        .paninfo {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 16px;
+            text-align: left;
+        }
+        
+        .paninfo th, .paninfo td {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+        }
+        
+        .paninfo th {
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        
+        .paninfo tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .paninfo tr:hover {
+            background-color: #f1f1f1;
+            cursor: pointer;
+        }
+        
+        .paninfo th:first-child, .paninfo td:first-child {
+            border-left: none;
+        }
+        
+        .paninfo th:last-child, .paninfo td:last-child {
+            border-right: none;
+        }
+        
+        /* 搜索框样式 */
+        .hl-rb-head {
+            margin-bottom: 20px;
+        }
+        
+        .hl-rb-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin: 0;
+        }
+        
+        /* 按钮样式 */
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        /* 输入框样式 */
+        input {
+            flex: 1;
+            padding: 10px;
+            width: 80%;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="conch-main">
+            <div class="conch-main-wrap">
+                <div class="conch-layout">
+                    <div class="conch-lcontent">
+                        <!-- 网盘搜索模块 -->
+                        <div class="hl-rb-head clearfix">
+                            <h3 id="pantitle" class="hl-rb-title">网盘：正在搜索。。。。</h3>
+                        </div>
+
+                        <div style="margin: 10px 0; display: flex; gap: 5px; padding-right: 10px">
+                            <span style="padding: 10px 0px; font-size: 14px;">搜索词：</span>
+                            <input onkeydown="if(event.keyCode === 13) document.getElementById('searchButton').click(); changeName();" type="text" id="movienameInput" value="" style="flex: 1; padding: 10px; width: 80%; font-size: 16px; border: 1px solid #ddd; box-sizing: border-box;">
+                            <button id="searchButton" onclick="setPan()" style="padding: 10px 20px; font-size: 16px; background-color: #4CAF50; color: white; border: none; cursor: pointer; border-radius: 4px;">查询</button>
+                        </div>
+
+                        <div id="panbox" class="hl-row-box hl-rb-relvod clearfix">
+                            <table class="paninfo" id="paninfodb"></table>
+                            <table class="paninfo" id="paninfo"></table>
+                            <table class="paninfo" id="paninfo1"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 定义maccms对象，使用绝对路径
+        var maccms = {
+            path: "https://xiaoniu11.top",
+            mid: "0",
+            url: "https://xiaoniu11.top",
+            wapurl: "https://xiaoniu11.top",
+            mob_status: "0"
+        };
+
+        // 定义移除字符串中数字的函数
+        function removeNumbersFromString(str) {
+            return str.replace(/\d+/g, '');
+        }
+
+        // 获取Cookie的函数
+        function getCookie(name) {
+            var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+            if (match) return decodeURIComponent(match[2]);
+            return '';
+        }
+
+        // 获取Token的函数
+        function getToken() {
+            return '';
+        }
+
+        // 假设这是当前浏览器的地址
+        var url = window.location.href;
+
+        // 正则表达式匹配 id、sid、nid、vc 参数
+        var regex = /\/id\/\d+\/sid\/\d+\/nid\/\d+\/vc\/[a-zA-Z0-9]+\.html/;
+
+        if (regex.test(url)) {
+            // 匹配成功后的处理
+        } else {
+            // 匹配失败后的处理
+        }
+
+        var pan1 = '';
+        var pan2 = '';
+        var pans = '';
+
+        // 初始化搜索
+        setPan();
+        window.nameChange = false;
+
+        function changeName() {
+            window.nameChange = true;
+        }
+
+        function zhuan(index, url) {
+            $("#quarkitembtn-" + index).text("请稍候...");
+            layui.use(['layer'], function (index) {
+                layui.layer.msg('获取中请稍候');
+            });
+
+            let moviename = removeNumbersFromString($("#movienameInput").val());
+            let vodId = '';
+            let nameChange = window.nameChange;
+
+            $.post(maccms.path + '/index.php/ajax/zl', {
+                "vodId": vodId,
+                "vodName": moviename,
+                'url': url,
+                'nameChange': (nameChange + "")
+            }, function (res) {
+                layui.use(['layer'], function (index) {
+                    // 创建模态框显示链接
+                    layui.layer.open({
+                        title: '<i class="layui-icon layui-icon-ok-circle"></i> 获取成功',
+                        content: '<div style="padding: 20px; font-size: 14px;">' +
+                            '<div style="margin-bottom: 15px; color: #333; font-weight: bold;">网盘链接：</div>' +
+                            '<div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; ' +
+                            'border: 1px solid #e0e6ed; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">' +
+                            '<p style="word-break: break-all; margin: 0; line-height: 1.6; color: #2c3e50; font-family: monospace;">' + res + '</p>' +
+                            '</div>' +
+                            '<div style="margin-top: 10px; font-size: 12px; color: #666;">点击"复制"按钮可将链接复制到剪贴板</div>' +
+                            '</div>',
+                        area: ['70%', 'auto'],
+                        btn: ['<i class="layui-icon layui-icon-copy"></i> 复制', '<i class="layui-icon layui-icon-close"></i> 关闭'],
+                        offset: ['50%', '50%'],
+                        success: function (layero, index) {
+                            // 精确定位模态框到屏幕中央
+                            layero.css({
+                                marginLeft: -layero.outerWidth() / 2,
+                                marginTop: -layero.outerHeight() / 2
+                            });
+                        },
+                        skin: 'layui-layer-molv',
+                        anim: 2,
+                        yes: function (index, layero) {
+                            // 复制链接到剪贴板
+                            var tempInput = $('<input style="position: absolute; left: -9999px; top: -9999px;">');
+                            $('body').append(tempInput);
+                            tempInput.val(res).select();
+                            document.execCommand('copy');
+                            tempInput.remove();
+
+                            // 提示复制成功
+                            layui.layer.msg('链接已复制到剪贴板');
+                            layui.layer.close(index);
+                        }
+                    });
+                });
+                $("#quarkitem-" + index).text(res);
+                $("#quarkitembtn-" + index).text("获取成功");
+                $("#quarkitembtn-" + index).attr("onclick", "");
+            });
+        }
+
+        function tongji(clickflag) {
+            let moviename = removeNumbersFromString($("#movienameInput").val());
+            let vodId = '';
+
+            $.post(maccms.path + '/index.php/ajax/tongji', {
+                "vodId": vodId,
+                "vodName": moviename,
+                'host': location.host,
+                'ip': clickflag ? 'click' : getCookie('HMACCOUNT') || getToken()
+            }, function (res) {
+                // 处理响应
+            });
+        }
+
+        function setPan() {
+            let moviename = removeNumbersFromString($("#movienameInput").val());
+            $("#paninfo").html("");
+            $("#pantitle").text("网盘：正在搜索。。。。");
+
+            $.get(maccms.path + '/index.php/ajax/getByApiPanHub', {
+                "wd": moviename
+            }, function (res) {
+                let ret = JSON.parse(res);
+
+                $("#pantitle").text("");
+
+                if (ret.code == 200) {
+                    // 遍历数据并将其添加到 info 节点中
+                    if (!ret['data']) return;
+                    ret['data'].slice(0, 20).forEach(function (item, index) {
+                        let type = item.url.indexOf("quark") > 0 ? '夸克' : item.url.indexOf("baidu") > 0 ? "百度" : item.url.indexOf("xunlei") > 0 ? "迅雷" : "";
+                        let zhuanUrl = item.url.indexOf("pwd") > 0 ? item.url : item.url + "?pwd=" + item.password;
+
+                        // 创建一个新的表格行
+                        var row = '<tr>' +
+                            '<td style="max-width: 100px">' + item.note + '(' + type + ')</td>' +
+                            '<td id="quarkitem-' + index + '">＊＊＊＊＊＊</td>' +
+                            '<td id="quarkitembtn-' + index + '" style="width:100px; padding:0; text-align:center;"><button onclick="tongji(1);zhuan(' + index + ',\'' + zhuanUrl + '\'); this.disabled=true;" style="width:100%; height:100%; background:transparent; border:none; cursor:pointer; padding:12px 15px; color:inherit; font-size:inherit; text-align:center;">立即获取</button></td>' +
+                            '</tr>';
+
+                        // 将表格行附加到 info 节点中
+                        $('#paninfo').append(row);
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
